@@ -14,6 +14,7 @@ Funciona en **Mac, iPad y celular** desde el navegador, se instala como app y fu
 - **Gamificación**: XP, estrellas, 3 corazones por lección, combos, racha diaria 🔥, meta diaria de 30 XP, niveles y medallas.
 - **⚡ Reto del día**: 60 segundos contrarreloj. Todos reciben **las mismas preguntas ese día**, así que es una competencia justa.
 - **👑 Liga semanal**: ranking de XP de la semana entre los jugadores.
+- **🎛️ Banda pixel**: cuatro músicos pixel-art (piano, batería, guitarra y voz) trabajan en su estudio en la pantalla principal, te cuentan en qué están y celebran cuando terminas una lección. ¡Tócalos para que suenen!
 - Varios jugadores por dispositivo (p. ej. papá e hija en el mismo iPad).
 
 ## Cómo abrirla

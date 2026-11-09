@@ -809,6 +809,167 @@ const RENDER = {
 };
 
 // ---------------- Pantallas ----------------
+// ---------------- Banda pixel: agentes pixel-art que trabajan en el estudio ----------------
+const BAND = [
+  { name: 'Pía', icon: '🎹', role: 'piano', hair: '#3b2a1a', skin: '#f5c9a0', shirt: '#7c5cff',
+    jobs: c => [`Preparando «${c.next}»`, 'Afinando el piano', 'Practicando escalas', 'Ordenando partituras'] },
+  { name: 'Toto', icon: '🥁', role: 'drums', hair: '#e2683c', skin: '#e0a878', shirt: '#22c55e',
+    jobs: c => ['Marcando el ritmo', `Cuidando tu racha: 🔥 ${c.streak}`, 'Puliendo los platillos', 'Contando 1, 2, 3, 4…'] },
+  { name: 'Lula', icon: '🎸', role: 'guitar', hair: '#1f1b2e', skin: '#c68a5e', shirt: '#ec4899',
+    jobs: c => ['Componiendo una canción', 'Cambiando una cuerda', `Contando tus estrellas: ⭐ ${c.stars}`, 'Buscando acordes nuevos'] },
+  { name: 'Coro', icon: '🎤', role: 'voice', hair: '#f4c542', skin: '#f2d1b3', shirt: '#0ea5e9',
+    jobs: c => [`Cantando tu meta: ${c.tx}/${GOAL} XP`, 'Calentando la voz', 'Revisando la liga 👑', 'Ensayando «Estrellita»'] },
+];
+const BAND_W = 176, BAND_H = 72, FLOOR = 56;
+function bandPlay(role) {
+  if (role === 'piano') playSeq([60, 64, 67, 72], 0.12);
+  else if (role === 'drums') { tone(80, 0, .28, .45, [[1, 1, 'sine']]); tone(320, .18, .1, .12, [[1, 1, 'square'], [1.41, .6, 'square']]); tone(80, .36, .28, .45, [[1, 1, 'sine']]); }
+  else if (role === 'guitar') [55, 59, 62, 67, 71].forEach((m, i) => tone(freq(m), i * .035, 1.4, .1, [[1, 1, 'triangle'], [2, .5, 'sine'], [3, .25, 'sine']]));
+  else [72, 74, 76, 79].forEach((m, i) => tone(freq(m), i * .22, .3, .16, [[1, 1, 'sine'], [2, .1, 'sine']]));
+}
+function pixelBand({ compact = false, mood = null } = {}) {
+  const p = me();
+  const ctxInfo = () => {
+    const nx = FLAT.find(f => !(p.stars[f.id] > 0));
+    return { next: nx ? nx.lesson.title : '¡Todo completado!', streak: streakOf(p), stars: Object.values(p.stars).reduce((a, b) => a + b, 0), tx: todayXp(p) };
+  };
+  const cv = h('canvas', { class: 'band-canvas' + (compact ? ' compact' : ''), width: BAND_W, height: BAND_H, role: 'img', 'aria-label': 'La banda pixel trabajando en el estudio' });
+  const g = cv.getContext('2d');
+  const slots = BAND.map((a, i) => ({ ...a, cx: 22 + i * 44, busy: true, job: 0, jump: -1e9, notes: [], blink: rnd(4000), sad: mood === 'sad' ? Infinity : 0 }));
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let party = 0;
+  const r = (x, y, w, hh, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, hh); };
+  const addNote = (s, n = 1) => { for (let k = 0; k < n; k++) s.notes.push({ x: s.cx - 2 + rnd(10) - 3, y: FLOOR - 22, vx: (rand() - .5) * .25, life: 1, c: pick(['#fbbf24', '#f9a8d4', '#a5f3fc', '#c4b5fd', '#86efac']) }); };
+
+  function scene(t) {
+    r(0, 0, BAND_W, FLOOR, '#2b2350');
+    for (let x = 0; x < BAND_W; x += 8) r(x, 0, 1, FLOOR, '#2f2757');
+    // guirnalda de luces
+    for (let x = 6; x < BAND_W; x += 12) { const y = 4 + Math.round(Math.sin(x / 18) * 2); r(x, y, 2, 2, (Math.floor(t / 400) + x / 12) % 3 < 1 ? '#fbbf24' : (x / 12 % 2 ? '#f472b6' : '#60a5fa')); }
+    // ventana con luna y póster
+    r(10, 14, 22, 16, '#1b1638'); r(11, 15, 20, 14, '#3b4a8c'); r(25, 17, 3, 3, '#fef3c7'); r(20, 15, 1, 14, '#1b1638'); r(11, 21, 20, 1, '#1b1638');
+    r(140, 13, 22, 18, '#f9a8d4'); r(142, 15, 18, 14, '#fdf2f8');
+    r(149, 18, 1, 7, '#7c5cff'); r(147, 24, 3, 2, '#7c5cff'); r(150, 18, 3, 1, '#7c5cff'); r(153, 18, 1, 6, '#7c5cff'); r(151, 23, 3, 2, '#7c5cff');
+    // letrero
+    r(62, 12, 52, 11, '#14102a'); 
+    const on = Math.floor(t / 700) % 4 !== 0;
+    'NOTITAS'.split('').forEach((ch, i) => r(66 + i * 7, 15, 5, 5, on ? ['#f472b6', '#fbbf24', '#86efac', '#60a5fa', '#c4b5fd', '#f472b6', '#fbbf24'][i] : '#3a3160'));
+    // piso
+    r(0, FLOOR, BAND_W, BAND_H - FLOOR, '#8b5a3c');
+    for (let y = FLOOR + 4; y < BAND_H; y += 5) r(0, y, BAND_W, 1, '#7a4d32');
+    r(0, FLOOR, BAND_W, 1, '#5c3a26');
+    r(8, FLOOR + 6, BAND_W - 16, 8, '#7c3aed'); r(10, FLOOR + 8, BAND_W - 20, 4, '#8b5cf6');
+  }
+
+  function person(s, b, dy, t) {
+    const x = s.cx, sad = t < s.sad, blink = (t + s.blink) % 4000 < 140;
+    r(x - 3, b - 4 + dy, 2, 4, '#2b2340'); r(x + 1, b - 4 + dy, 2, 4, '#2b2340');
+    r(x - 4, b - 11 + dy, 8, 7, s.shirt); r(x - 4, b - 5 + dy, 8, 1, '#00000033');
+    r(x - 3, b - 17 + dy, 6, 6, s.skin);
+    r(x - 3, b - 18 + dy, 6, 2, s.hair); r(x - 4, b - 17 + dy, 1, 3, s.hair); r(x + 3, b - 17 + dy, 1, 3, s.hair);
+    if (sad) { r(x - 2, b - 15 + dy, 1, 1, '#1b1530'); r(x + 1, b - 15 + dy, 1, 1, '#1b1530'); r(x - 1, b - 12 + dy, 2, 1, '#7f1d1d'); r(x + 4, b - 18 + dy + (Math.floor(t / 300) % 2), 1, 2, '#7dd3fc'); }
+    else if (!blink) { r(x - 2, b - 15 + dy, 1, 2, '#1b1530'); r(x + 1, b - 15 + dy, 1, 2, '#1b1530'); }
+    else { r(x - 2, b - 14 + dy, 1, 1, '#1b1530'); r(x + 1, b - 14 + dy, 1, 1, '#1b1530'); }
+    r(x - 3, b - 13 + dy, 1, 1, '#f8a5a5'); r(x + 2, b - 13 + dy, 1, 1, '#f8a5a5');
+  }
+
+  function agent(s, t) {
+    const b = FLOOR + 2, x = s.cx;
+    const jp = (t - s.jump) / 450;
+    const dy = jp >= 0 && jp < 1 ? -Math.round(Math.sin(Math.PI * jp) * 7) : 0;
+    const sad = t < s.sad;
+    const play = (s.busy || t < party) && !sad;
+    const f = play ? Math.floor(t / 170 + s.cx) % 2 : 0;
+    if (s.role === 'piano') {
+      person(s, b, dy, t);
+      r(x - 5, b - 9 + dy - (f ? 1 : 0), 2, 2, s.skin); r(x + 3, b - 9 + dy - (f ? 0 : 1), 2, 2, s.skin);
+      r(x - 9, b - 8, 18, 2, '#1b1530'); r(x - 8, b - 7, 16, 2, '#fff');
+      for (const k of [-6, -4, -1, 1, 3, 6]) r(x + k, b - 7, 1, 1, '#1b1530');
+      r(x - 8, b - 5, 1, 5, '#4b4466'); r(x + 7, b - 5, 1, 5, '#4b4466');
+    } else if (s.role === 'drums') {
+      person(s, b, dy, t);
+      r(x + 6, b - 15, 1, 15, '#9ca3af'); r(x + 3, b - 16 + (play && f ? 1 : 0), 7, 1, '#fbbf24');
+      r(x - 6, b - 7, 11, 1, '#e5e7eb'); r(x - 6, b - 6, 11, 4, '#ef4444'); r(x - 6, b - 4, 11, 1, '#fca5a5'); r(x - 4, b - 2, 1, 2, '#9ca3af'); r(x + 2, b - 2, 1, 2, '#9ca3af');
+      const up = play ? (f ? 3 : 0) : 1, up2 = play ? (f ? 0 : 3) : 1;
+      r(x - 5, b - 9 + dy, 2, 2, s.skin); r(x - 4, b - 11 + dy - up, 1, 3, '#d6b07a');
+      r(x + 3, b - 9 + dy, 2, 2, s.skin); r(x + 4, b - 11 + dy - up2, 1, 3, '#d6b07a');
+    } else if (s.role === 'guitar') {
+      person(s, b, dy, t);
+      r(x - 9, b - 11 + dy, 7, 1, '#7c3f12'); r(x - 10, b - 12 + dy, 2, 2, '#4a2208');
+      r(x - 3, b - 10 + dy, 7, 5, '#d97706'); r(x - 2, b - 9 + dy, 5, 3, '#b45309'); r(x, b - 8 + dy, 1, 1, '#3b1d06');
+      r(x - 7, b - 12 + dy, 2, 2, s.skin); r(x + 2, b - 9 + dy + (f ? 2 : 0), 2, 2, s.skin);
+    } else {
+      person(s, b, dy, t);
+      const open = play && f;
+      r(x - 1, b - 13 + dy, 2, open ? 2 : 1, '#7f1d1d');
+      r(x + 7, b - 14, 1, 14, '#6b7280'); r(x + 5, b - 2, 5, 1, '#6b7280');
+      r(x + 6, b - 17, 3, 3, '#374151'); r(x + 6, b - 17, 3, 1, '#9ca3af');
+      r(x + 4, b - 13 + dy, 2, 2, s.skin); r(x - 5, b - 10 + dy, 1, 4, s.shirt); r(x - 5, b - 6 + dy, 1, 1, s.skin);
+    }
+    if (!play && !sad) { // pensando la próxima tarea
+      const k = Math.floor(t / 300) % 4;
+      r(x - 4, b - 27, 9, 5, '#fff'); r(x - 1, b - 22, 2, 1, '#fff');
+      for (let d = 0; d < 3; d++) r(x - 2 + d * 2, b - 25, 1, 1, d < k ? '#2b2340' : '#c9c3dc');
+    }
+    if (play && rand() < (t < party ? 0.12 : 0.025)) addNote(s);
+    s.notes = s.notes.filter(n => (n.life -= 0.012) > 0);
+    for (const n of s.notes) {
+      n.y -= 0.35; n.x += n.vx + Math.sin((n.y + s.cx) / 4) * 0.12;
+      if (n.life > .15 || Math.floor(t / 60) % 2) { r(n.x, n.y + 3, 2, 2, n.c); r(n.x + 1, n.y, 1, 3, n.c); r(n.x + 2, n.y, 1, 1, n.c); }
+    }
+  }
+
+  let last = 0, raf = 0;
+  function frame(t) {
+    if (!cv.isConnected && last) return;
+    raf = requestAnimationFrame(frame);
+    if (reduce && t - last < 400) return;
+    last = t || 1;
+    scene(t); slots.forEach(s => agent(s, t));
+    if (t < party && Math.floor(t / 450) !== Math.floor((t - 20) / 450)) slots.forEach((s, i) => { s.jump = t + i * 70; });
+  }
+  raf = requestAnimationFrame(frame);
+
+  const now = () => performance.now();
+  function react(kind) {
+    const t = now();
+    if (kind === 'ok') slots.forEach((s, i) => { s.jump = t + i * 80; s.sad = 0; addNote(s, 2); });
+    else if (kind === 'bad') slots.forEach(s => { s.sad = t + 1600; });
+    else if (kind === 'win') { party = t + 3200; slots.forEach((s, i) => { s.sad = 0; s.jump = t + i * 80; addNote(s, 4); }); }
+  }
+  cv.addEventListener('click', e => {
+    const rect = cv.getBoundingClientRect();
+    const i = Math.max(0, Math.min(3, Math.floor((e.clientX - rect.left) / rect.width * 4)));
+    const s = slots[i]; s.jump = now(); s.busy = true; s.sad = mood === 'sad' ? s.sad : 0; addNote(s, 5); bandPlay(s.role);
+    if (rows[i]) { s.job = (s.job + 1) % s.jobs(ctxInfo()).length; paint(); }
+  });
+
+  let rows = [];
+  const paint = () => {
+    const c = ctxInfo();
+    slots.forEach((s, i) => {
+      if (!rows[i]) return;
+      rows[i].className = 'band-row' + (s.busy ? ' busy' : '');
+      rows[i].lastChild.textContent = s.busy ? s.jobs(c)[s.job] : 'Pensando la próxima tarea…';
+    });
+  };
+  if (compact) return { el: cv, react };
+
+  rows = slots.map(s => h('div', { class: 'band-row' }, h('span', { class: 'band-dot', style: { background: s.shirt } }), h('b', {}, `${s.icon} ${s.name}`), h('span', { class: 'band-job' })));
+  paint();
+  const timer = setInterval(() => {
+    if (!cv.isConnected) return clearInterval(timer);
+    const s = pick(slots);
+    if (s.busy && rand() < .35) s.busy = false;
+    else { s.busy = true; s.job = (s.job + 1) % s.jobs(ctxInfo()).length; }
+    paint();
+  }, 2600);
+  const el = h('div', { class: 'card band' },
+    h('div', { class: 'band-head' }, h('h3', {}, '🎛️ Estudio de la banda'), h('span', { class: 'muted' }, '¡Toca a un músico!')),
+    cv, h('div', { class: 'band-list' }, rows));
+  return { el, react };
+}
+
 const app = document.getElementById('app');
 const PRACTICE = /[?&]practica/.test(location.search); // modo de prueba: corazones infinitos y pistas
 let cleanup = null;
@@ -866,7 +1027,7 @@ function homeScreen() {
       h('div', { class: 'unit-head' }, h('span', { class: 'ui' }, u.icon), h('div', {}, h('h2', {}, u.title), h('p', {}, u.desc))),
       h('div', { class: 'path' }, nodes));
   });
-  screen(shell(goal, units));
+  screen(shell(goal, pixelBand().el, units));
   if (currentNode && firstTodo > 0) setTimeout(() => currentNode.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
 }
 
@@ -915,6 +1076,7 @@ function runLesson(unit, li) {
   function fail() {
     screen(h('div', { class: 'lesson', style: { '--c': unit.color } }, h('div', { class: 'end' },
       h('div', { class: 'big' }, '💔'), h('h1', {}, '¡Te quedaste sin corazones!'),
+      pixelBand({ compact: true, mood: 'sad' }).el,
       h('p', { class: 'muted' }, 'No pasa nada, así se aprende. ¿Lo intentas otra vez?'),
       h('button', { class: 'btn block', onClick: () => runLesson(unit, li) }, 'Reintentar'),
       h('button', { class: 'btn ghost block', onClick: () => go('home') }, 'Volver'))));
@@ -930,9 +1092,12 @@ function runLesson(unit, li) {
     const fresh = addXp(p, xp);
     sfx.win(); confetti();
     const goalNow = !prevGoal && todayXp(p) >= GOAL;
+    const band = pixelBand({ compact: true });
+    setTimeout(() => band.react('win'), 60);
     screen(h('div', { class: 'lesson', style: { '--c': unit.color } }, h('div', { class: 'end' },
       h('div', { class: 'big' }, perfect ? '🏆' : '🎉'),
       h('h1', {}, perfect ? '¡Lección perfecta!' : '¡Lección completada!'),
+      band.el,
       h('div', { class: 'stars-big' }, [1, 2, 3].map(n => h('span', { class: n <= stars ? '' : 'off' }, '⭐'))),
       h('div', { class: 'tiles' },
         h('div', { class: 'tile' }, h('div', { class: 'tl' }, 'XP'), h('div', { class: 'tv' }, '+' + xp)),
