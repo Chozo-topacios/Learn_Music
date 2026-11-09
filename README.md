@@ -38,3 +38,21 @@ python3 -m http.server 8000
 ```
 
 y abre http://localhost:8000.
+
+## Plugins de Claude Code del proyecto
+Al abrir este repo con Claude Code, se ofrecen automáticamente (configurados en `.claude/settings.json`):
+
+| Plugin | Qué hace | Origen |
+|---|---|---|
+| **Ponytail** | Hace que Claude escriba menos código: reutiliza lo que ya existe antes de agregar cosas nuevas. Comandos `/ponytail-review` y `/ponytail-help`. Requiere Node.js. | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) |
+| **Agent Skills** | Skills de ingeniería: especificar, planear, probar y revisar código. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) |
+| **graphify** | Skill `/graphify .` que convierte el proyecto en un mapa de conocimiento (`graphify-out/graph.html`). Requiere Python 3.10+; instala el paquete `graphifyy` la primera vez. | [safishamsi/graphify](https://github.com/safishamsi/graphify) (copiada en `.claude/skills/graphify/`) |
+
+Claude Code pide confirmar la instalación la primera vez que abres el proyecto. También puedes instalarlos a mano:
+
+```
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+/plugin marketplace add addyosmani/agent-skills
+/plugin install agent-skills@addy-agent-skills
+```
