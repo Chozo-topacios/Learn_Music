@@ -323,3 +323,12 @@ textarea.field { min-height: 90px; font-size: 14px; font-family: ui-monospace, m
   .piano { height: 150px; }
   .listen { width: 96px; height: 96px; font-size: 40px; }
 }
+
+/* Banner de nivel */
+.level-banner {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin: 34px 0 6px; font-weight: 900; font-size: 20px; color: var(--ink);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.level-banner::before, .level-banner::after { content: ''; flex: 1; height: 3px; background: var(--line); border-radius: 3px; }
+.level-banner span { font-size: 30px; }

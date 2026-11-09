@@ -4,7 +4,11 @@ App gamificada (estilo Duolingo) para aprender música y piano en familia y comp
 Funciona en **Mac, iPad y celular** desde el navegador, se instala como app y funciona sin internet.
 
 ## ¿Qué tiene?
-- **Camino de 29 lecciones** en 9 unidades: teclado, teclas negras, leer el pentagrama, notas agudas, oído, ritmo, acordes, canciones y teoría.
+- **93 lecciones en 4 niveles** de dificultad creciente:
+  - 🌱 **Principiante**: teclado, teclas negras, pentagrama, oído, ritmo, acordes, canciones y teoría.
+  - 🌿 **Intermedio**: bemoles, clave de fa, intervalos, puntillo, acordes mayores/menores, escalas, canciones sin nombres en las teclas y examen.
+  - 🌳 **Avanzado**: ♯ y ♭ en la partitura, reconocer notas de oído, dictado musical, lectura a primera vista, acordes con teclas negras, canciones leyendo partitura, teoría avanzada y examen.
+  - 🏆 **Experto**: lectura y dictado sin pistas, oído absoluto, escalas avanzadas y cromática, todos los acordes, *Para Elisa* y gran examen final.
 - **Piano táctil con sonido** para tocar en cada ejercicio.
 - **Canciones reales** guiadas frase por frase: Estrellita, María tenía un corderito, Martinillo, Himno de la alegría y Cumpleaños feliz.
 - **Gamificación**: XP, estrellas, 3 corazones por lección, combos, racha diaria 🔥, meta diaria de 30 XP, niveles y medallas.

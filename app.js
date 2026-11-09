@@ -98,14 +98,21 @@ const BADGES = [
   { id: 'daily', icon: '🏆', name: 'Retador', test: p => Object.keys(p.daily).length >= 1 },
   { id: 'fast', icon: '⚡', name: '200 pts en el reto', test: p => p.duelBest >= 200 },
   { id: 'chords', icon: '🎹', name: 'Acordista', test: p => Object.keys(p.stars).some(k => k.startsWith('acordes')) },
+  { id: 'bass', icon: '🐻', name: 'Clave de fa', test: p => !!p.stars['clavefa-0'] },
+  { id: 'lvl2', icon: '🌿', name: 'Nivel intermedio', test: p => !!p.stars['repaso2-1'] },
+  { id: 'lvl3', icon: '🌳', name: 'Nivel avanzado', test: p => !!p.stars['repaso3-1'] },
+  { id: 'elisa', icon: '🎻', name: 'Para Elisa', test: p => Object.keys(p.stars).some(k => k.startsWith('elisa')) },
+  { id: 'master', icon: '👑', name: 'Maestro', test: p => !!p.stars['final-0'] },
 ];
 
 // ---------------- Música ----------------
 const LATIN = ['Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'];
 const ENG = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
-const pcName = pc => (state.notation === 'en' ? ENG : LATIN)[((pc % 12) + 12) % 12];
-const noteName = m => pcName(m % 12);
+const LATIN_B = ['Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'];
+const ENG_B = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+const pcName = (pc, flat = false) => (state.notation === 'en' ? (flat ? ENG_B : ENG) : (flat ? LATIN_B : LATIN))[((pc % 12) + 12) % 12];
+const noteName = (m, flat = false) => pcName(m % 12, flat);
 const isBlack = m => !WHITE_PCS.includes(((m % 12) + 12) % 12);
 const freq = m => 440 * 2 ** ((m - 69) / 12);
 const stepOf = m => (Math.floor(m / 12) - 5) * 7 + WHITE_PCS.indexOf(m % 12); // Do4 = 0
@@ -181,30 +188,35 @@ function rangeFor(notes, minWhites = 8) {
   return [lo, hi];
 }
 
-function staffSVG(notes, { labels = false } = {}) {
-  const n = notes.length, W = Math.max(220, 92 + n * 46), H = 150;
-  const y = s => 104 - (s - 2) * 6;
+function staffSVG(notes, { labels = false, clef = 'G', flat = false } = {}) {
+  const n = notes.length, W = Math.max(220, 104 + n * 46), H = 150;
+  const base = clef === 'F' ? -10 : 2; // paso de la línea de abajo
+  const y = st => 104 - (st - base) * 6;
   const ink = '#2b2340';
+  const ledger = (cx, st) => `<line x1="${cx - 13}" x2="${cx + 13}" y1="${y(st)}" y2="${y(st)}" stroke="${ink}" stroke-width="1.6"/>`;
   let s = `<svg class="staff" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="pentagrama">`;
-  for (let st = 2; st <= 10; st += 2) s += `<line x1="8" x2="${W - 8}" y1="${y(st)}" y2="${y(st)}" stroke="${ink}" stroke-width="1.6"/>`;
-  s += `<text class="clef" x="12" y="${y(2) + 13}" font-size="78" fill="${ink}">𝄞</text>`;
+  for (let st = base; st <= base + 8; st += 2) s += `<line x1="8" x2="${W - 8}" y1="${y(st)}" y2="${y(st)}" stroke="${ink}" stroke-width="1.6"/>`;
+  s += clef === 'F' ? `<text class="clef" x="12" y="${y(base + 2) + 4}" font-size="54" fill="${ink}">𝄢</text>`
+    : `<text class="clef" x="12" y="${y(base) + 13}" font-size="78" fill="${ink}">𝄞</text>`;
   notes.forEach((m, i) => {
-    const st = stepOf(m), cx = 96 + i * 46, cy = y(st);
-    for (let ls = 0; ls >= st; ls -= 2) s += `<line x1="${cx - 13}" x2="${cx + 13}" y1="${y(ls)}" y2="${y(ls)}" stroke="${ink}" stroke-width="1.6"/>`;
-    for (let ls = 12; ls <= st; ls += 2) s += `<line x1="${cx - 13}" x2="${cx + 13}" y1="${y(ls)}" y2="${y(ls)}" stroke="${ink}" stroke-width="1.6"/>`;
-    s += `<ellipse cx="${cx}" cy="${cy}" rx="7.6" ry="5.6" transform="rotate(-20 ${cx} ${cy})" fill="${ink}"/>`;
-    s += st < 6 ? `<line x1="${cx + 6.8}" x2="${cx + 6.8}" y1="${cy - 1}" y2="${cy - 38}" stroke="${ink}" stroke-width="1.8"/>`
+    const blk = isBlack(m), sm = blk ? (flat ? m + 1 : m - 1) : m;
+    const st = stepOf(sm), cx = 104 + i * 46, cy = y(st);
+    for (let ls = base - 2; ls >= st; ls -= 2) s += ledger(cx, ls);
+    for (let ls = base + 10; ls <= st; ls += 2) s += ledger(cx, ls);
+    if (blk) s += `<text x="${cx - 24}" y="${cy + 7}" font-size="22" font-weight="700" fill="${ink}">${flat ? '♭' : '♯'}</text>`;
+    s += `<ellipse class="nh" cx="${cx}" cy="${cy}" rx="7.6" ry="5.6" transform="rotate(-20 ${cx} ${cy})" fill="${ink}"/>`;
+    s += st < base + 4 ? `<line x1="${cx + 6.8}" x2="${cx + 6.8}" y1="${cy - 1}" y2="${cy - 38}" stroke="${ink}" stroke-width="1.8"/>`
       : `<line x1="${cx - 6.8}" x2="${cx - 6.8}" y1="${cy + 1}" y2="${cy + 38}" stroke="${ink}" stroke-width="1.8"/>`;
-    if (labels) s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#7c5cff">${noteName(m)}</text>`;
+    if (labels) s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#7c5cff">${noteName(m, flat)}</text>`;
   });
   return h('div', { class: 'center', html: s + '</svg>' }).firstChild;
 }
 
-const FIG = { w: { name: 'Redonda', beats: 4 }, h: { name: 'Blanca', beats: 2 }, q: { name: 'Negra', beats: 1 }, e: { name: 'Corchea', beats: 0.5 } };
-const FKEYS = ['w', 'h', 'q', 'e'];
+const FIG = { w: { name: 'Redonda', beats: 4 }, h: { name: 'Blanca', beats: 2 }, q: { name: 'Negra', beats: 1 }, e: { name: 'Corchea', beats: 0.5 }, hd: { name: 'Blanca con puntillo', beats: 3 }, qd: { name: 'Negra con puntillo', beats: 1.5 } };
+const FKEYS = ['w', 'h', 'q', 'e'], FK2 = ['w', 'h', 'q', 'e', 'hd', 'qd'];
 const fmtBeats = b => (Math.floor(b) ? Math.floor(b) : '') + (b % 1 ? '½' : '') || '0';
-function figSVG(k) {
-  const ink = '#2b2340';
+function figSVG(fk) {
+  const ink = '#2b2340', k = fk[0];
   let s = `<svg class="fig" viewBox="0 0 40 72" xmlns="http://www.w3.org/2000/svg">`;
   if (k === 'w') s += `<ellipse cx="20" cy="56" rx="10" ry="6.5" fill="none" stroke="${ink}" stroke-width="3.4"/>`;
   else {
@@ -212,6 +224,7 @@ function figSVG(k) {
     s += `<line x1="24.6" x2="24.6" y1="55" y2="10" stroke="${ink}" stroke-width="2.4"/>`;
     if (k === 'e') s += `<path d="M24.6 10 C 27 22, 38 25, 35 42 C 33 31, 29 28, 24.6 26 Z" fill="${ink}"/>`;
   }
+  if (fk[1] === 'd') s += `<circle cx="33" cy="58" r="3.4" fill="${ink}"/>`;
   return h('div', { html: s + '</svg>' }).firstChild;
 }
 
@@ -227,20 +240,41 @@ function numChoices(total) {
   return shuffle([total, ...shuffle(cand).slice(0, 3)]);
 }
 const chordNotes = c => (c.type === 'm' ? [0, 3, 7] : [0, 4, 7]).map(i => c.root + i);
-const chordName = c => pcName(c.root) + (c.type === 'm' ? ' menor' : ' mayor');
+const chordName = c => pcName(c.root, c.flat) + (c.type === 'm' ? ' menor' : ' mayor');
+const flatOf = o => o.flat === 'mix' ? rand() < .5 : !!o.flat;
+function whiteUp(m, steps) { let x = m; for (let k = 0; k < steps; k++) { x++; while (isBlack(x)) x++; } return x; }
+const intName = n => ({ 2: '2ª', 3: '3ª', 4: '4ª', 5: '5ª', 6: '6ª', 7: '7ª', 8: '8ª' })[n];
+const pickOthers = (ans, list, k = 3) => shuffle([ans, ...shuffle(list.filter(x => x !== ans)).slice(0, k)]);
+function randMelody(pool, len) {
+  const p = [...pool].sort((a, b) => a - b); let i = rnd(p.length); const out = [p[i]];
+  while (out.length < len) { let d = rnd(5) - 2; if (!d) d = rand() < .5 ? 1 : -1; i = Math.max(0, Math.min(p.length - 1, i + d)); out.push(p[i]); }
+  return out;
+}
 
 const GEN = {
-  keyFind: o => ({ kind: 'keyFind', target: pick(o.pool), lo: o.lo ?? 60, hi: o.hi ?? 71 }),
-  keyName: o => { const t = pick(o.pool); return { kind: 'keyName', target: t, lo: o.lo ?? 60, hi: o.hi ?? 71, opts: noteChoices(t, o.pool) }; },
-  staffRead: o => { const t = pick(o.pool); return { kind: 'staffRead', target: t, opts: noteChoices(t, o.pool) }; },
-  staffToKey: o => { const t = pick(o.pool); const [lo, hi] = rangeFor(o.pool, 8); return { kind: 'staffToKey', target: t, lo, hi }; },
+  keyFind: o => ({ kind: 'keyFind', target: pick(o.pool), lo: o.lo ?? 60, hi: o.hi ?? 71, flat: flatOf(o) }),
+  keyName: o => { const t = pick(o.pool); return { kind: 'keyName', target: t, lo: o.lo ?? 60, hi: o.hi ?? 71, opts: noteChoices(t, o.pool), flat: flatOf(o) }; },
+  staffRead: o => { const t = pick(o.pool); return { kind: 'staffRead', target: t, opts: noteChoices(t, o.pool), clef: o.clef, flat: flatOf(o) }; },
+  staffToKey: o => { const t = pick(o.pool); const [lo, hi] = rangeFor(o.pool, 8); return { kind: 'staffToKey', target: t, lo, hi, clef: o.clef, flat: flatOf(o) }; },
   earHighLow: o => { const min = o.min || 5, max = o.max || 12; const a = 57 + rnd(14); const d = min + rnd(max - min + 1); const up = rand() < .5; return { kind: 'earHighLow', a, b: up ? a + d : a - d, up }; },
   earSame: o => { const a = 57 + rnd(14); const same = rand() < .5; const d = (1 + rnd(o.max || 4)) * (rand() < .5 ? 1 : -1); return { kind: 'earSame', a, b: same ? a : a + d, same }; },
   earContour: o => { const up = rand() < .5; const len = 3 + rnd(2); let n = 60 + rnd(7); const seq = [n]; for (let i = 1; i < len; i++) { n += (up ? 1 : -1) * (1 + rnd(o.step || 3)); seq.push(n); } return { kind: 'earContour', seq, up }; },
-  rhythmName: () => ({ kind: 'rhythmName', fig: pick(FKEYS), opts: shuffle(FKEYS) }),
-  rhythmValue: () => ({ kind: 'rhythmValue', fig: pick(FKEYS) }),
+  rhythmName: o => { const set = o.figs || FKEYS, f = pick(set); return { kind: 'rhythmName', fig: f, opts: pickOthers(f, set) }; },
+  rhythmValue: o => { const set = o.figs || FKEYS, f = pick(set); const vals = [...new Set(set.map(k => FIG[k].beats))]; return { kind: 'rhythmValue', fig: f, opts: pickOthers(FIG[f].beats, vals).sort((a, b) => b - a) }; },
   rhythmSum: o => { const k = 2 + rnd(o.max ? o.max - 1 : 2); const figs = Array.from({ length: k }, () => pick(o.figs || FKEYS)); const total = figs.reduce((s, f) => s + FIG[f].beats, 0); return { kind: 'rhythmSum', figs, total, opts: numChoices(total) }; },
   chordBuild: o => ({ kind: 'chordBuild', chord: pick(o.chords), hint: !!o.hint }),
+  chordName: o => { const c = pick(o.chords); return { kind: 'chordName', chord: c, opts: pickOthers(c, o.chords) }; },
+  chordEar: o => ({ kind: 'chordEar', chord: { root: pick(o.roots || [60, 62, 64, 65, 67, 69]), type: rand() < .5 ? 'm' : 'M' } }),
+  intervalSee: o => { const n = pick(o.ints); const a = pick([60, 62, 64, 65, 67].filter(r => whiteUp(r, n - 1) <= 79)); return { kind: 'intervalSee', a, b: whiteUp(a, n - 1), n, opts: pickOthers(n, o.ints).sort((x, y) => x - y) }; },
+  intervalEar: o => { const n = pick(o.ints); const a = pick([60, 62, 65, 67]); return { kind: 'intervalEar', a, b: whiteUp(a, n - 1), n, harm: !!o.harm, opts: pickOthers(n, o.ints).sort((x, y) => x - y) }; },
+  earNote: o => { const t = pick(o.pool); return { kind: 'earNote', target: t, opts: noteChoices(t, o.pool), ref: o.ref !== false }; },
+  earKey: o => { const t = pick(o.pool); const [lo, hi] = rangeFor(o.pool, 8); return { kind: 'earKey', target: t, lo, hi, ref: o.ref !== false }; },
+  dictado: o => { const [lo, hi] = rangeFor(o.pool, 8); return { kind: 'melody', notes: randMelody(o.pool, o.len), lo, hi, hidden: true, labels: o.labels !== false, noHint: !!o.noHint, title: 'Escucha y repite 🎧' }; },
+  sightRead: o => { const [lo, hi] = rangeFor(o.pool, 8); return { kind: 'melody', notes: randMelody(o.pool, o.len), lo, hi, staff: true, clef: o.clef, labels: !!o.labels, noHint: !!o.noHint, title: 'Toca lo que ves 👀' }; },
+  scale: o => {
+    const sc = pick(o.scales); const notes = o.desc && rand() < .5 ? [...sc.notes].reverse() : sc.notes; const [lo, hi] = rangeFor(sc.notes, 8);
+    return { kind: 'melody', notes, lo, hi, labels: !!o.labels, noHint: !!o.noHint, flat: !!sc.flat, title: (sc.chrom ? 'Escala cromática' : 'Escala de ' + pcName(sc.root, sc.flat) + (sc.minor ? ' menor' : ' mayor')) + (notes !== sc.notes ? ' ⬇️' : ' ⬆️') };
+  },
 };
 const SCALE = [60, 62, 64, 65, 67, 69, 71];
 const W1 = [60, 62, 64], W2 = [60, 62, 64, 65, 67], W3 = SCALE;
@@ -248,6 +282,23 @@ const BLK = [61, 63, 66, 68, 70], ALL12 = [60, 61, 62, 63, 64, 65, 66, 67, 68, 6
 const STAFF_HI = [72, 74, 76, 77, 79], STAFF_ALL = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79];
 const MAJ = [{ root: 60 }, { root: 65 }, { root: 67 }], MAJ2 = [...MAJ, { root: 62 }, { root: 64 }, { root: 69 }];
 const MIN = [{ root: 69, type: 'm' }, { root: 62, type: 'm' }, { root: 64, type: 'm' }];
+const MAJ_B = [{ root: 62 }, { root: 64 }, { root: 69 }, { root: 70, flat: true }, { root: 63, flat: true }];
+const MIN_B = [{ root: 60, type: 'm', flat: true }, { root: 65, type: 'm', flat: true }, { root: 67, type: 'm', flat: true }, { root: 71, type: 'm' }];
+const CH12 = [...MAJ2, ...MIN], CH_ALL = [...MAJ2, ...MIN, ...MAJ_B, ...MIN_B];
+const BASS1 = [53, 55, 57], BASS2 = [48, 50, 52, 53, 55, 57, 59, 60], BASS3 = [43, 45, 47, 48, 50, 52, 53, 55, 57, 59];
+const W4 = [60, 62, 64, 65, 67, 69, 71, 72, 74];
+const SC = {
+  C: { root: 60, notes: [60, 62, 64, 65, 67, 69, 71, 72] },
+  G: { root: 67, notes: [55, 57, 59, 60, 62, 64, 66, 67] },
+  F: { root: 65, flat: true, notes: [65, 67, 69, 70, 72, 74, 76, 77] },
+  Am: { root: 69, minor: true, notes: [57, 59, 60, 62, 64, 65, 67, 69] },
+  D: { root: 62, notes: [62, 64, 66, 67, 69, 71, 73, 74] },
+  Bb: { root: 70, flat: true, notes: [58, 60, 62, 63, 65, 67, 69, 70] },
+  Em: { root: 64, minor: true, notes: [64, 66, 67, 69, 71, 72, 74, 76] },
+  Dm: { root: 62, minor: true, flat: true, notes: [62, 64, 65, 67, 69, 70, 72, 74] },
+  A: { root: 69, notes: [57, 59, 61, 62, 64, 66, 68, 69] },
+  Chr: { root: 60, chrom: true, notes: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72] },
+};
 
 // ---------------- Contenido ----------------
 const THEORY = [
@@ -273,6 +324,22 @@ const THEORY = [
   ['El tempo es…', 'La velocidad de la música', ['El volumen', 'La nota más aguda', 'Un tipo de piano']],
   ['¿Cuántas teclas tiene un piano normal?', '88', ['52', '64', '100']]],
 ];
+THEORY.push(
+  [['¿Qué indica un compás de 3/4?', '3 tiempos por compás', ['3 notas por canción', '4 tiempos por compás', 'Tocar 3 veces']],
+  ['¿Qué es staccato?', 'Notas cortas y separadas', ['Notas largas y unidas', 'Muy fuerte', 'Muy lento']],
+  ['¿Qué es legato?', 'Notas unidas, sin cortes', ['Notas cortas', 'Sin sonido', 'Muy agudo']],
+  ['Una fermata (calderón) significa…', 'Alargar la nota a gusto', ['Cortar la nota', 'Subir una octava', 'Tocar suave']],
+  ['Ritardando (rit.) significa…', 'Ir más despacio', ['Ir más rápido', 'Más fuerte', 'Repetir']],
+  ['Pianissimo (pp) significa…', 'Muy suave', ['Muy fuerte', 'Muy rápido', 'Muy agudo']],
+  ['Da capo (D.C.) significa…', 'Volver al principio', ['Terminar', 'Saltar al final', 'Tocar más lento']]],
+  [['¿Cuántos semitonos hay en una octava?', '12', ['7', '8', '10']],
+  ['La escala de Sol mayor tiene…', 'Fa♯', ['Si♭', 'Do♯', 'Ninguna alteración']],
+  ['La escala de Fa mayor tiene…', 'Si♭', ['Fa♯', 'Mi♭', 'Do♯']],
+  ['Do mayor y La menor tienen…', 'Las mismas notas', ['Ninguna nota igual', 'Solo teclas negras', 'Distinto número de notas']],
+  ['En clave de fa, la 4ª línea es…', 'Fa', ['Sol', 'Do', 'La']],
+  ['Un acorde mayor se forma con…', 'Fundamental, 3ª mayor y 5ª', ['Tres notas seguidas', 'Solo teclas negras', 'Dos notas iguales']],
+  ['Re♯ y Mi♭ son…', 'La misma tecla', ['Teclas distintas', 'Dos teclas blancas', 'Notas de clave de fa']]],
+);
 const theoryLesson = bank => () => shuffle(bank).slice(0, 6).map(([q, a, w]) => ({ kind: 'theory', q, a, opts: shuffle([a, ...w]) }));
 
 const SONGS = {
@@ -281,14 +348,21 @@ const SONGS = {
   martinillo: { phrases: [[60, 62, 64, 60], [64, 65, 67], [67, 69, 67, 65, 64, 60], [60, 55, 60]], full: [0, 0, 1, 1, 2, 2, 3, 3] },
   alegria: { phrases: [[64, 64, 65, 67, 67, 65, 64, 62], [60, 60, 62, 64, 64, 62, 62], [60, 60, 62, 64, 62, 60, 60]], full: [0, 1, 0, 2] },
   cumple: { phrases: [[60, 60, 62, 60, 65, 64], [60, 60, 62, 60, 67, 65], [60, 60, 72, 69, 65, 64, 62], [70, 70, 69, 65, 67, 65]], full: [0, 1, 2, 3] },
+  cascabel: { phrases: [[64, 64, 64, 64, 64, 64], [64, 67, 60, 62, 64], [65, 65, 65, 65, 65, 64, 64, 64], [64, 62, 62, 64, 62, 67]], full: [0, 1, 2, 3] },
+  puente: { phrases: [[67, 69, 67, 65, 64, 65, 67], [62, 64, 65], [64, 65, 67], [62, 67, 64, 60]], full: [0, 1, 2, 0, 3] },
+  santos: { phrases: [[60, 64, 65, 67], [60, 64, 65, 67, 64, 60, 64, 62], [64, 64, 62, 60, 60, 64, 67, 67, 65], [64, 65, 67, 64, 60, 62, 60]], full: [0, 1, 2, 3] },
+  elisa: { phrases: [[76, 75, 76, 75, 76, 71, 74, 72, 69], [60, 64, 69, 71], [64, 68, 71, 72], [64, 72, 71, 69]], full: [0, 1, 2, 0, 1, 3] },
 };
-function songLesson(song) {
+function songLesson(song, mode = {}) {
   return () => {
     const all = song.phrases.flat();
     const [lo, hi] = rangeFor(all, 8);
-    const list = [{ kind: 'info', icon: '🎶', text: 'Escucha cada frase y luego tócala. Las notas aparecen arriba; si te equivocas, la tecla correcta brillará ✨', piano: { lo, hi } }];
-    song.phrases.forEach((p, i) => list.push({ kind: 'melody', notes: p, lo, hi, title: `Frase ${i + 1} de ${song.phrases.length}` }));
-    list.push({ kind: 'melody', notes: song.full.flatMap(i => song.phrases[i]), lo, hi, title: '¡Ahora la canción completa!' });
+    const text = mode.staff ? 'Ahora la canción está escrita en el pentagrama, como en una partitura de verdad. ¡Léela y tócala! 🎼'
+      : mode.labels === false ? 'Esta vez las teclas no tienen nombre. Guíate por las notas de arriba y por lo que ya sabes del teclado. 💪'
+        : 'Escucha cada frase y luego tócala. Las notas aparecen arriba; si te equivocas, la tecla correcta brillará ✨';
+    const list = [{ kind: 'info', icon: '🎶', text, piano: { lo, hi, labels: mode.labels !== false } }];
+    song.phrases.forEach((p, i) => list.push({ kind: 'melody', notes: p, lo, hi, ...mode, title: `Frase ${i + 1} de ${song.phrases.length}` }));
+    list.push({ kind: 'melody', notes: song.full.flatMap(i => song.phrases[i]), lo, hi, ...mode, staff: false, title: '¡Ahora la canción completa!' });
     return list;
   };
 }
@@ -360,7 +434,168 @@ const UNITS = [
       L('Palabras italianas', [], { build: theoryLesson(THEORY[2]) }),
     ],
   },
+  // =================== NIVEL 2 · INTERMEDIO ===================
+  {
+    id: 'bemoles', level: 2, title: 'Bemoles ♭', icon: '🎩', color: '#db2777', desc: 'Otro nombre para las negras', lessons: [
+      L('Si♭ y Mi♭', [['keyFind', { pool: [63, 70], flat: true }], ['keyName', { pool: [62, 63, 64, 69, 70, 71], flat: true }]], { intro: { icon: '♭', text: 'Bemol (♭) = un poquito más grave. Si♭ es la tecla negra justo a la izquierda de Si. ¡Ojo! Re♯ y Mi♭ son la misma tecla con dos nombres.', piano: { lo: 60, hi: 71, labels: false, hl: [63, 70] } } }),
+      L('Todos los bemoles', [['keyFind', { pool: BLK, flat: true }], ['keyName', { pool: ALL12, flat: true }]]),
+      L('♯ y ♭ mezclados', [['keyFind', { pool: BLK, flat: 'mix' }], ['keyName', { pool: ALL12, flat: 'mix' }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'clavefa', level: 2, title: 'Clave de fa', icon: '🐻', color: '#0891b2', desc: 'Las notas graves (mano izquierda)', lessons: [
+      L('Fa, Sol y La', [['staffRead', { pool: BASS1, clef: 'F' }], ['staffToKey', { pool: BASS1, clef: 'F' }]], { intro: { icon: '🐻', text: 'La clave de fa sirve para las notas graves, las de la mano izquierda. Sus dos puntitos abrazan la línea de Fa (la 4ª línea).', staff: BASS1, clef: 'F' } }),
+      L('Hasta el Do central', [['staffRead', { pool: BASS2, clef: 'F' }], ['staffToKey', { pool: BASS2, clef: 'F' }]], { intro: { icon: '🎯', text: 'En clave de fa, el Do central va en una rayita por encima del pentagrama.', staff: BASS2, clef: 'F' } }),
+      L('Más grave aún', [['staffRead', { pool: BASS3, clef: 'F' }], ['staffToKey', { pool: BASS3, clef: 'F' }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'intervalos', level: 2, title: 'Intervalos', icon: '📏', color: '#0d9488', desc: 'La distancia entre dos notas', lessons: [
+      L('2ª, 3ª y 5ª', [['intervalSee', { ints: [2, 3, 5] }]], { intro: { icon: '📏', text: 'Un intervalo es la distancia entre dos notas. Cuenta las teclas blancas incluyendo la primera y la última: Do → Mi = Do, Re, Mi = ¡una 3ª!', piano: { lo: 60, hi: 71, labels: true, hl: [60, 64] } } }),
+      L('Hasta la octava', [['intervalSee', { ints: [2, 3, 4, 5, 6, 8] }]]),
+      L('Intervalos de oído', [['intervalEar', { ints: [3, 5, 8] }], ['intervalSee', { ints: [2, 3, 4, 5, 6, 7, 8] }]], { intro: { icon: '👂', text: 'Ahora con los oídos: la 3ª suena dulce, la 5ª suena fuerte y "hueca", y la 8ª suena casi igual pero más aguda.', demo: [['3ª', [60, 64]], ['5ª', [60, 67]], ['8ª', [60, 72]]] } }),
+    ],
+  },
+  {
+    id: 'puntillo', level: 2, title: 'El puntillo', icon: '⏱️', color: '#dc2626', desc: 'Figuras con puntillo', lessons: [
+      L('¿Qué es el puntillo?', [['rhythmName', { figs: FK2 }], ['rhythmValue', { figs: FK2 }]], { intro: { icon: '⏱️', text: 'El puntillo suma la mitad del valor de la nota. Blanca con puntillo = 2 + 1 = 3 tiempos. Negra con puntillo = 1 + ½ = 1½ tiempos.', figs: ['h', 'hd', 'q', 'qd'] } }),
+      L('Sumas con puntillo', [['rhythmSum', { figs: ['hd', 'qd', 'q', 'e'] }], ['rhythmValue', { figs: FK2 }]]),
+      L('Compases difíciles', [['rhythmSum', { figs: FK2, max: 3 }], ['rhythmSum', { figs: ['hd', 'qd', 'e', 'q'], max: 4 }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'acordes2', level: 2, title: 'Mayor o menor', icon: '🎭', color: '#16a34a', desc: 'Acordes alegres y tristes', lessons: [
+      L('Alegre o triste', [['chordEar', {}]], { intro: { icon: '🎭', text: 'Los acordes mayores suenan alegres 😊 y los menores suenan tristes 😢. ¡Escucha la diferencia!', demo: [['😊 Do mayor', [60, 64, 67]], ['😢 Do menor', [60, 63, 67]]] } }),
+      L('¿Qué acorde es?', [['chordName', { chords: CH12 }]]),
+      L('Construye y escucha', [['chordBuild', { chords: CH12 }], ['chordEar', {}], ['chordName', { chords: CH12 }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'escalas', level: 2, title: 'Escalas', icon: '🪜', color: '#7c3aed', desc: 'Notas en orden, subiendo y bajando', lessons: [
+      L('Do mayor', [['scale', { scales: [SC.C], desc: true }]], { n: 4, intro: { icon: '🪜', text: 'Una escala son notas en orden, una tras otra. Do mayor usa solo teclas blancas. Las teclas ya no tienen nombre: ¡guíate por las notas de arriba!' } }),
+      L('Sol y Fa mayor', [['scale', { scales: [SC.G, SC.F], desc: true }]], { n: 4, intro: { icon: '✨', text: 'Sol mayor lleva Fa♯ y Fa mayor lleva Si♭. ¡Atento a las teclas negras!' } }),
+      L('La menor', [['scale', { scales: [SC.Am, SC.C, SC.G, SC.F], desc: true }]], { n: 5, intro: { icon: '🌙', text: 'La menor tiene las mismas notas que Do mayor, pero empieza en La. Suena más misteriosa.' } }),
+    ],
+  },
+  {
+    id: 'canciones2', level: 2, title: 'Canciones sin ayuda', icon: '🎸', color: '#ea580c', desc: 'Teclas sin nombres', lessons: [
+      L('Cascabel', [], { build: songLesson(SONGS.cascabel, { labels: false }) }),
+      L('Puente de Londres', [], { build: songLesson(SONGS.puente, { labels: false }) }),
+      L('Cuando los santos', [], { build: songLesson(SONGS.santos, { labels: false }) }),
+      L('Himno sin ayuda', [], { build: songLesson(SONGS.alegria, { labels: false }) }),
+    ],
+  },
+  {
+    id: 'repaso2', level: 2, title: 'Examen intermedio', icon: '🏅', color: '#ca8a04', desc: '¡Demuestra lo que sabes!', lessons: [
+      L('Repaso', [['keyName', { pool: ALL12, flat: 'mix' }], ['staffRead', { pool: BASS2, clef: 'F' }], ['intervalSee', { ints: [2, 3, 4, 5, 6, 8] }], ['rhythmSum', { figs: FK2 }], ['chordEar', {}], ['chordName', { chords: CH12 }], ['staffRead', { pool: STAFF_ALL }]], { n: 12 }),
+      L('Examen', [['keyFind', { pool: BLK, flat: 'mix' }], ['staffToKey', { pool: BASS3, clef: 'F' }], ['intervalEar', { ints: [3, 5, 8] }], ['rhythmValue', { figs: FK2 }], ['chordBuild', { chords: CH12 }], ['scale', { scales: [SC.G, SC.F] }]], { n: 12 }),
+    ],
+  },
+  // =================== NIVEL 3 · AVANZADO ===================
+  {
+    id: 'alteraciones', level: 3, title: 'Alteraciones', icon: '♯', color: '#be185d', desc: '♯ y ♭ en el pentagrama', lessons: [
+      L('Sostenidos escritos', [['staffRead', { pool: [61, 63, 66, 68, 70, 62, 65, 67] }], ['staffToKey', { pool: [61, 63, 66, 68, 70] }]], { intro: { icon: '♯', text: 'En la partitura, el ♯ se escribe justo antes de la nota. Esa nota se toca en la tecla negra de su derecha.', staff: [60, 61, 65, 66] } }),
+      L('Bemoles escritos', [['staffRead', { pool: [61, 63, 66, 68, 70, 62, 64, 71], flat: true }], ['staffToKey', { pool: [61, 63, 66, 68, 70], flat: true }]], { intro: { icon: '♭', text: 'El ♭ también se escribe antes de la nota, pero se toca en la tecla negra de su izquierda.', staff: [71, 70, 64, 63], flat: true } }),
+      L('Todo mezclado', [['staffRead', { pool: [...ALL12, 73, 75, 78], flat: 'mix' }], ['staffToKey', { pool: ALL12, flat: 'mix' }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'oido2', level: 3, title: 'Oído de músico', icon: '🎧', color: '#d97706', desc: 'Reconoce notas de oído', lessons: [
+      L('¿Do, Re o Mi?', [['earNote', { pool: W1 }]], { intro: { icon: '🎧', text: 'Primero sonará Do como referencia. Compara la segunda nota con Do: ¿cuánto subió?', demo: [['Do', [60]], ['Re', [62]], ['Mi', [64]]] } }),
+      L('Hasta Sol', [['earNote', { pool: W2 }], ['earKey', { pool: W2 }]]),
+      L('Todas las blancas', [['earNote', { pool: W3 }], ['earKey', { pool: W3 }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'dictado', level: 3, title: 'Dictado musical', icon: '📝', color: '#9333ea', desc: 'Escucha y repite melodías', lessons: [
+      L('3 notas', [['dictado', { pool: W2, len: 3 }]], { n: 6, intro: { icon: '📝', text: 'Escucharás una melodía corta. ¡Memorízala y tócala igual! Puedes escucharla las veces que quieras.' } }),
+      L('4 notas', [['dictado', { pool: W3, len: 4 }]], { n: 6 }),
+      L('5 notas sin nombres', [['dictado', { pool: W3, len: 5, labels: false }]], { n: 6 }),
+    ],
+  },
+  {
+    id: 'lectura', level: 3, title: 'Lectura a primera vista', icon: '👀', color: '#0284c7', desc: 'Lee y toca de corrido', lessons: [
+      L('Clave de sol', [['sightRead', { pool: W2, len: 4 }]], { n: 6, intro: { icon: '👀', text: 'Lee las notas del pentagrama de izquierda a derecha y tócalas. La nota naranja es la que toca ahora.' } }),
+      L('Más notas', [['sightRead', { pool: W4, len: 5 }]], { n: 6 }),
+      L('Clave de fa', [['sightRead', { pool: BASS2, len: 4, clef: 'F' }]], { n: 6 }),
+    ],
+  },
+  {
+    id: 'acordes3', level: 3, title: 'Acordes con negras', icon: '🎹', color: '#15803d', desc: 'Re, Mi, La, Si♭ y más', lessons: [
+      L('Mayores con negras', [['chordBuild', { chords: MAJ_B, hint: true }]], { n: 6, intro: { icon: '🎹', text: 'La receta del acorde mayor siempre es la misma: nota base + 4 semitonos + 3 semitonos. En Re mayor eso cae en una tecla negra: Re + Fa♯ + La.', piano: { lo: 60, hi: 76, labels: false, hl: [62, 66, 69] } } }),
+      L('Menores con negras', [['chordBuild', { chords: MIN_B, hint: true }]], { n: 6, intro: { icon: '🌧️', text: 'Acorde menor: nota base + 3 semitonos + 4 semitonos. Do menor = Do + Mi♭ + Sol.', piano: { lo: 60, hi: 76, labels: false, hl: [60, 63, 67] } } }),
+      L('Sin pistas', [['chordBuild', { chords: CH_ALL }], ['chordName', { chords: CH_ALL }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'canciones3', level: 3, title: 'Leer partituras', icon: '🎼', color: '#c2410c', desc: 'Canciones en el pentagrama', lessons: [
+      L('Estrellita', [], { build: songLesson(SONGS.estrellita, { staff: true, labels: false }) }),
+      L('Himno de la alegría', [], { build: songLesson(SONGS.alegria, { staff: true, labels: false }) }),
+      L('Cascabel', [], { build: songLesson(SONGS.cascabel, { staff: true, labels: false }) }),
+    ],
+  },
+  {
+    id: 'teoria2', level: 3, title: 'Teoría avanzada', icon: '🎓', color: '#4f46e5', desc: 'Como un músico de verdad', lessons: [
+      L('Expresión', [], { build: theoryLesson(THEORY[3]) }),
+      L('Escalas y armonía', [], { build: theoryLesson(THEORY[4]) }),
+    ],
+  },
+  {
+    id: 'repaso3', level: 3, title: 'Examen avanzado', icon: '🥈', color: '#a16207', desc: '¡Casi experto!', lessons: [
+      L('Repaso', [['staffRead', { pool: [...ALL12, 72, 74, 76], flat: 'mix' }], ['earNote', { pool: W3 }], ['dictado', { pool: W3, len: 4 }], ['chordName', { chords: CH_ALL }], ['intervalEar', { ints: [2, 3, 5, 8] }], ['rhythmSum', { figs: FK2, max: 3 }]], { n: 12 }),
+      L('Examen', [['sightRead', { pool: W4, len: 5 }], ['earKey', { pool: W3 }], ['chordBuild', { chords: CH_ALL }], ['staffToKey', { pool: BASS3, clef: 'F' }], ['scale', { scales: [SC.D, SC.Am, SC.F] }]], { n: 12 }),
+    ],
+  },
+  // =================== NIVEL 4 · EXPERTO ===================
+  {
+    id: 'lectura2', level: 4, title: 'Lectura experta', icon: '📜', color: '#0369a1', desc: 'Sin pistas', lessons: [
+      L('Clave de sol larga', [['sightRead', { pool: STAFF_ALL, len: 6, noHint: true }]], { n: 6, intro: { icon: '📜', text: 'Nivel experto: si te equivocas, la tecla correcta ya no se ilumina. ¡Confía en tu lectura!' } }),
+      L('Clave de fa larga', [['sightRead', { pool: BASS3, len: 6, clef: 'F', noHint: true }]], { n: 6 }),
+      L('Saltos grandes', [['sightRead', { pool: [55, 60, 64, 67, 72, 76, 79], len: 6, noHint: true }], ['sightRead', { pool: [43, 48, 52, 55, 59, 60], len: 6, clef: 'F', noHint: true }]], { n: 6 }),
+    ],
+  },
+  {
+    id: 'dictado2', level: 4, title: 'Dictado experto', icon: '🦻', color: '#7e22ce', desc: 'Melodías largas de oído', lessons: [
+      L('6 notas', [['dictado', { pool: W4, len: 6, labels: false }]], { n: 6 }),
+      L('Con teclas negras', [['dictado', { pool: [60, 62, 63, 65, 67, 68, 70, 72], len: 5, labels: false }]], { n: 6 }),
+      L('Sin ayudas', [['dictado', { pool: W4, len: 7, labels: false, noHint: true }]], { n: 6 }),
+    ],
+  },
+  {
+    id: 'oido3', level: 4, title: 'Oído absoluto', icon: '🦉', color: '#b45309', desc: 'El reto final de los oídos', lessons: [
+      L('Intervalos juntos', [['intervalEar', { ints: [2, 3, 4, 5, 6, 8], harm: true }]], { intro: { icon: '🦉', text: 'Ahora las dos notas suenan a la vez. ¡Escucha con mucha atención!', demo: [['3ª', [60, 64]], ['4ª', [60, 65]], ['5ª', [60, 67]], ['6ª', [60, 69]]] } }),
+      L('Notas con negras', [['earNote', { pool: ALL12 }], ['earKey', { pool: ALL12 }]], { n: 10 }),
+      L('Mezcla de oído', [['intervalEar', { ints: [2, 3, 4, 5, 6, 7, 8] }], ['chordEar', { roots: [60, 61, 62, 63, 64, 65, 66, 67] }], ['earKey', { pool: ALL12 }]], { n: 12 }),
+    ],
+  },
+  {
+    id: 'escalas2', level: 4, title: 'Escalas avanzadas', icon: '🏔️', color: '#6d28d9', desc: 'Re, Si♭, Mi menor y cromática', lessons: [
+      L('Re mayor y Si♭ mayor', [['scale', { scales: [SC.D, SC.Bb], desc: true }]], { n: 4 }),
+      L('Escalas menores', [['scale', { scales: [SC.Em, SC.Dm, SC.Am], desc: true }]], { n: 5 }),
+      L('Sin pistas', [['scale', { scales: [SC.D, SC.Bb, SC.A, SC.Chr, SC.Em], desc: true, noHint: true }]], { n: 5, intro: { icon: '🏔️', text: 'La escala cromática toca TODAS las teclas, blancas y negras, una tras otra. ¡Y aquí ya no hay pistas!' } }),
+    ],
+  },
+  {
+    id: 'acordes4', level: 4, title: 'Maestro de acordes', icon: '👑', color: '#166534', desc: 'Todos los acordes', lessons: [
+      L('Reconoce rápido', [['chordName', { chords: CH_ALL }], ['chordEar', { roots: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69] }]], { n: 12 }),
+      L('Construye todos', [['chordBuild', { chords: CH_ALL }]], { n: 10 }),
+    ],
+  },
+  {
+    id: 'elisa', level: 4, title: 'Para Elisa', icon: '🎻', color: '#9a3412', desc: 'Beethoven', lessons: [
+      L('Para Elisa (con ayuda)', [], { build: songLesson(SONGS.elisa) }),
+      L('Para Elisa (partitura)', [], { build: songLesson(SONGS.elisa, { staff: true, labels: false }) }),
+      L('Para Elisa (experto)', [], { build: songLesson(SONGS.elisa, { labels: false, noHint: true }) }),
+    ],
+  },
+  {
+    id: 'final', level: 4, title: 'Gran examen final', icon: '🏆', color: '#854d0e', desc: '¿Eres maestro de la música?', lessons: [
+      L('Examen final', [['sightRead', { pool: STAFF_ALL, len: 6, noHint: true }], ['dictado', { pool: W4, len: 5, labels: false }], ['chordName', { chords: CH_ALL }], ['intervalEar', { ints: [2, 3, 4, 5, 6, 8], harm: true }], ['staffRead', { pool: [...ALL12, 73, 75], flat: 'mix' }], ['staffRead', { pool: BASS3, clef: 'F' }], ['earKey', { pool: ALL12 }], ['rhythmSum', { figs: FK2, max: 4 }], ['scale', { scales: [SC.D, SC.Bb, SC.Em], noHint: true }]], { n: 15 }),
+    ],
+  },
 ];
+UNITS.forEach(u => { u.level = u.level || 1; });
+const LEVELS = { 1: ['🌱', 'Nivel 1 · Principiante'], 2: ['🌿', 'Nivel 2 · Intermedio'], 3: ['🌳', 'Nivel 3 · Avanzado'], 4: ['🏆', 'Nivel 4 · Experto'] };
 const FLAT = UNITS.flatMap(u => u.lessons.map((l, i) => ({ unit: u, li: i, id: `${u.id}-${i}`, lesson: l })));
 const CHALLENGE_POOL = [['keyName', { pool: W3 }], ['keyFind', { pool: W3 }], ['staffRead', { pool: W3 }], ['staffRead', { pool: STAFF_ALL }], ['rhythmValue', {}], ['earHighLow', { min: 3, max: 12 }], ['keyName', { pool: ALL12 }], ['rhythmName', {}]];
 
@@ -402,19 +637,20 @@ const RENDER = {
   info(ex, box, ctl) {
     const card = h('div', { class: 'info-card' }, ex.icon && h('span', { class: 'ii' }, ex.icon), ex.text);
     box.append(card);
-    if (ex.staff) box.append(staffSVG(ex.staff, { labels: true }), h('button', { class: 'btn ghost small', onClick: () => playSeq(ex.staff, .5) }, '🔊 Escuchar'));
-    if (ex.figs) box.append(h('div', { class: 'figs' }, FKEYS.map(k => h('div', { class: 'fig-lbl' }, figSVG(k), FIG[k].name, h('span', { class: 'muted' }, fmtBeats(FIG[k].beats) + ' t')))));
+    if (ex.staff) box.append(staffSVG(ex.staff, { labels: true, clef: ex.clef, flat: ex.flat }), h('button', { class: 'btn ghost small', onClick: () => playSeq(ex.staff, .5) }, '🔊 Escuchar'));
+    if (ex.demo) box.append(h('div', { class: 'row' }, ex.demo.map(([lb, notes]) => h('button', { class: 'btn ghost small', onClick: () => playSeq([...notes, notes], .3) }, lb))));
+    if (ex.figs) box.append(h('div', { class: 'figs' }, (ex.figs === true ? FKEYS : ex.figs).map(k => h('div', { class: 'fig-lbl' }, figSVG(k), FIG[k].name, h('span', { class: 'muted' }, fmtBeats(FIG[k].beats) + ' t')))));
     if (ex.piano) { const p = piano({ ...ex.piano, labels: ex.piano.labels ?? true }); (ex.piano.hl || []).forEach(m => p.mark(m, 'hl')); box.append(p); }
     box.append(h('div', { style: { 'margin-top': 'auto' } }), h('button', { class: 'btn block', onClick: () => ctl.done(true) }, '¡Entendido! 👍'));
   },
   keyFind(ex, box, ctl) {
-    box.append(title('Toca la tecla'), h('div', { class: 'big-name' }, noteName(ex.target)));
+    box.append(title('Toca la tecla'), h('div', { class: 'big-name' }, noteName(ex.target, ex.flat)));
     const p = piano({
       lo: ex.lo, hi: ex.hi, onKey(m) {
         if (ctl.locked) return;
         const ok = m % 12 === ex.target % 12;
         p.mark(m, ok ? 'good' : 'bad'); if (!ok) p.mark(ex.target, 'good');
-        ctl.done(ok, noteName(ex.target));
+        ctl.done(ok, noteName(ex.target, ex.flat));
       },
     });
     box.append(h('div', { style: { 'margin-top': 'auto' } }), p);
@@ -422,21 +658,21 @@ const RENDER = {
   keyName(ex, box, ctl) {
     const p = piano({ lo: ex.lo, hi: ex.hi }); p.mark(ex.target, 'hl');
     box.append(title('¿Qué nota es la tecla amarilla?'), p,
-      options(ex.opts.map(pcName), ex.opts.indexOf(ex.target % 12), ctl, noteName(ex.target)));
+      options(ex.opts.map(pc => pcName(pc, ex.flat)), ex.opts.indexOf(ex.target % 12), ctl, noteName(ex.target, ex.flat)));
     setTimeout(() => playNote(ex.target), 250);
   },
   staffRead(ex, box, ctl) {
-    box.append(title('¿Qué nota es?'), staffSVG([ex.target]),
-      options(ex.opts.map(pcName), ex.opts.indexOf(ex.target % 12), ctl, noteName(ex.target), { after: () => playNote(ex.target) }));
+    box.append(title('¿Qué nota es?'), staffSVG([ex.target], { clef: ex.clef, flat: ex.flat }),
+      options(ex.opts.map(pc => pcName(pc, ex.flat)), ex.opts.indexOf(ex.target % 12), ctl, noteName(ex.target, ex.flat), { after: () => playNote(ex.target) }));
   },
   staffToKey(ex, box, ctl) {
-    box.append(title('Toca esta nota en el piano'), staffSVG([ex.target]));
+    box.append(title('Toca esta nota en el piano'), staffSVG([ex.target], { clef: ex.clef, flat: ex.flat }));
     const p = piano({
       lo: ex.lo, hi: ex.hi, short: true, onKey(m) {
         if (ctl.locked) return;
         const ok = m % 12 === ex.target % 12;
         p.mark(m, ok ? 'good' : 'bad'); if (!ok) p.mark(ex.target, 'good');
-        ctl.done(ok, noteName(ex.target));
+        ctl.done(ok, noteName(ex.target, ex.flat));
       },
     });
     box.append(h('div', { style: { 'margin-top': 'auto' } }), p);
@@ -459,7 +695,7 @@ const RENDER = {
   },
   rhythmValue(ex, box, ctl) {
     box.append(title('¿Cuántos tiempos dura?'), h('div', { class: 'figs' }, figSVG(ex.fig)),
-      options(FKEYS.map(k => fmtBeats(FIG[k].beats)), FKEYS.indexOf(ex.fig), ctl, fmtBeats(FIG[ex.fig].beats) + ' tiempos'));
+      options(ex.opts.map(fmtBeats), ex.opts.indexOf(FIG[ex.fig].beats), ctl, fmtBeats(FIG[ex.fig].beats) + ' tiempos'));
   },
   rhythmSum(ex, box, ctl) {
     const row = h('div', { class: 'figs' });
@@ -472,10 +708,10 @@ const RENDER = {
     const sel = new Set();
     const check = h('button', { class: 'btn block', disabled: true }, 'Comprobar');
     box.append(title('Toca el acorde de'), h('div', { class: 'big-name' }, chordName(ex.chord)));
-    if (ex.hint) box.append(h('div', { class: 'hint-chips' }, target.map(m => h('span', { class: 'chip' }, noteName(m)))));
+    if (ex.hint) box.append(h('div', { class: 'hint-chips' }, target.map(m => h('span', { class: 'chip' }, noteName(m, ex.chord.flat)))));
     else box.append(h('p', { class: 'muted center' }, 'Elige 3 teclas 🎹'));
     const p = piano({
-      lo: 60, hi: 76, onKey(m, el) {
+      lo: 60, hi: Math.max(76, whiteUp(Math.max(...target) - 1, 1)), onKey(m, el) {
         if (ctl.locked) return;
         if (sel.has(m)) { sel.delete(m); el.classList.remove('sel'); }
         else if (sel.size < 3) { sel.add(m); el.classList.add('sel'); }
@@ -490,34 +726,81 @@ const RENDER = {
       sel.forEach(m => p.mark(m, pcs.includes(m % 12) ? 'good' : 'bad'));
       if (!ok) target.forEach(m => p.mark(m, 'good'));
       playChord(ok ? [...sel] : target);
-      ctl.done(ok, target.map(noteName).join(' + '));
+      ctl.done(ok, target.map(m => noteName(m, ex.chord.flat)).join(' + '));
     });
     box.append(h('div', { style: { 'margin-top': 'auto' } }), p, check);
   },
   melody(ex, box, ctl) {
     let pos = 0, mistakes = 0;
     const allowed = Math.max(2, Math.ceil(ex.notes.length / 6));
-    const chips = ex.notes.map(m => h('span', { class: 'chip' }, noteName(m)));
+    const label = m => noteName(m, ex.flat);
+    const chips = ex.notes.map(m => h('span', { class: 'chip' }, ex.hidden ? '?' : ex.staff ? '♪' : label(m)));
+    const sv = ex.staff ? staffSVG(ex.notes, { clef: ex.clef, flat: ex.flat }) : null;
+    const heads = sv ? [...sv.querySelectorAll('.nh')] : [];
     const p = piano({
-      lo: ex.lo, hi: ex.hi, labels: true, onKey(m) {
+      lo: ex.lo, hi: ex.hi, labels: ex.labels !== false, onKey(m) {
         if (ctl.locked || pos >= ex.notes.length) return;
         if (m === ex.notes[pos]) {
-          chips[pos].classList.add('done'); p.unmark('next'); pos++;
+          chips[pos].classList.add('done'); if (ex.hidden) chips[pos].textContent = label(m);
+          if (heads[pos]) heads[pos].setAttribute('fill', '#15994a');
+          p.unmark('next'); pos++;
           if (pos === ex.notes.length) { const ok = mistakes <= allowed; chips.forEach(c => c.classList.remove('cur')); setTimeout(() => ctl.done(ok, ok ? null : `Tuviste ${mistakes} errores. ¡Vamos otra vez!`), 350); }
           else update();
         } else {
           mistakes++; p.flash(m, 'bad');
           chips[pos].classList.remove('shake'); void chips[pos].offsetWidth; chips[pos].classList.add('shake');
-          p.mark(ex.notes[pos], 'next');
+          if (!ex.noHint || PRACTICE) p.mark(ex.notes[pos], 'next');
         }
       },
     });
-    const update = () => chips.forEach((c, i) => c.classList.toggle('cur', i === pos));
+    const update = () => {
+      chips.forEach((c, i) => c.classList.toggle('cur', i === pos));
+      if (heads[pos]) heads[pos].setAttribute('fill', '#f97316');
+    };
     update();
-    box.append(title(ex.title), h('div', { class: 'chips' }, chips),
+    box.append(title(ex.title), ...(sv ? [sv] : []), h('div', { class: 'chips' }, chips),
       h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onClick: () => playSeq(ex.notes, .42) }, '🔊 Escuchar')),
       h('div', { style: { 'margin-top': 'auto' } }), p);
-    if (ex.notes.length <= 8) setTimeout(() => playSeq(ex.notes, .42), 300);
+    if (ex.hidden || (ex.notes.length <= 8 && !ex.staff)) setTimeout(() => playSeq(ex.notes, .42), 300);
+  },
+  chordName(ex, box, ctl) {
+    const notes = chordNotes(ex.chord); const [lo, hi] = rangeFor([60, ...notes, 76], 10);
+    const p = piano({ lo, hi }); notes.forEach(m => p.mark(m, 'hl'));
+    box.append(title('¿Qué acorde es?'), p, options(ex.opts.map(chordName), ex.opts.indexOf(ex.chord), ctl, chordName(ex.chord), { text: true }));
+    setTimeout(() => playChord(notes), 250);
+  },
+  chordEar(ex, box, ctl) {
+    const notes = chordNotes(ex.chord);
+    box.append(title('¿El acorde es mayor o menor?'), listenBtn(() => playSeq([...notes, notes], .3)),
+      options(['😊 Mayor', '😢 Menor'], ex.chord.type === 'm' ? 1 : 0, ctl, ex.chord.type === 'm' ? 'Menor 😢' : 'Mayor 😊', { one: true, text: true }));
+  },
+  intervalSee(ex, box, ctl) {
+    const p = piano({ lo: 60, hi: 79 }); p.mark(ex.a, 'hl'); p.mark(ex.b, 'hl');
+    box.append(title('¿Qué intervalo forman las teclas amarillas?'), h('p', { class: 'muted center' }, 'Cuenta las teclas blancas, incluyendo las dos amarillas 👆'), p,
+      options(ex.opts.map(intName), ex.opts.indexOf(ex.n), ctl, intName(ex.n)));
+    setTimeout(() => playSeq([ex.a, ex.b], .5), 250);
+  },
+  intervalEar(ex, box, ctl) {
+    box.append(title(ex.harm ? '¿Qué intervalo suena (las 2 notas juntas)?' : '¿Qué intervalo escuchas?'), listenBtn(() => ex.harm ? playChord([ex.a, ex.b]) : playSeq([ex.a, ex.b], .6)),
+      options(ex.opts.map(intName), ex.opts.indexOf(ex.n), ctl, intName(ex.n), { after: () => setTimeout(() => playSeq([ex.a, ex.b], .5), 200) }));
+  },
+  earNote(ex, box, ctl) {
+    box.append(title(ex.ref ? 'Primero suena Do. ¿Qué nota suena después?' : '¿Qué nota es?'), listenBtn(() => playSeq(ex.ref ? [60, ex.target] : [ex.target], .9)),
+      options(ex.opts.map(pc => pcName(pc)), ex.opts.indexOf(ex.target % 12), ctl, noteName(ex.target)));
+  },
+  earKey(ex, box, ctl) {
+    const play = () => playSeq(ex.ref ? [60, ex.target] : [ex.target], .9);
+    setTimeout(play, 350);
+    const p = piano({
+      lo: ex.lo, hi: ex.hi, onKey(m) {
+        if (ctl.locked) return;
+        const ok = m % 12 === ex.target % 12;
+        p.mark(m, ok ? 'good' : 'bad'); if (!ok) p.mark(ex.target, 'good');
+        ctl.done(ok, noteName(ex.target));
+      },
+    });
+    box.append(title(ex.ref ? 'Primero suena Do. Toca la 2ª nota en el piano' : 'Escucha y toca la nota'), h('div', { class: 'row' }, h('button', { class: 'btn ghost', onClick: play }, '🔊 Escuchar otra vez')),
+      h('div', { style: { 'margin-top': 'auto' } }), p);
   },
   theory(ex, box, ctl) {
     box.append(title(ex.q), h('div', { class: 'info-card center', style: { 'font-size': '50px' } }, '🤔'),
@@ -527,6 +810,7 @@ const RENDER = {
 
 // ---------------- Pantallas ----------------
 const app = document.getElementById('app');
+const PRACTICE = /[?&]practica/.test(location.search); // modo de prueba: corazones infinitos y pistas
 let cleanup = null;
 let tab = 'home';
 function screen(el) {
@@ -564,7 +848,7 @@ function homeScreen() {
   const offs = [0, 46, 70, 46, 0, -46, -70, -46];
   let currentNode = null, idx = 0;
   const firstTodo = FLAT.findIndex(f => !(p.stars[f.id] > 0));
-  const units = UNITS.map(u => {
+  const units = UNITS.map((u, ui) => {
     const nodes = u.lessons.map((l, li) => {
       const i = idx++; const f = FLAT[i];
       const unlocked = isUnlocked(p, i); const stars = p.stars[f.id] || 0; const isCur = i === firstTodo && unlocked;
@@ -577,7 +861,8 @@ function homeScreen() {
       if (isCur) currentNode = wrap;
       return wrap;
     });
-    return h('section', { style: { '--c': u.color } },
+    const banner = (ui === 0 || UNITS[ui - 1].level !== u.level) && h('div', { class: 'level-banner' }, h('span', {}, LEVELS[u.level][0]), LEVELS[u.level][1]);
+    return h('section', { style: { '--c': u.color } }, banner,
       h('div', { class: 'unit-head' }, h('span', { class: 'ui' }, u.icon), h('div', {}, h('h2', {}, u.title), h('p', {}, u.desc))),
       h('div', { class: 'path' }, nodes));
   });
@@ -591,7 +876,7 @@ function runLesson(unit, li) {
   const lesson = unit.lessons[li]; const id = `${unit.id}-${li}`;
   const queue = buildLesson(lesson);
   const total = queue.filter(e => e.kind !== 'info').length;
-  const S = { hearts: /[?&]practica/.test(location.search) ? 99 : 3, done: 0, firstTry: 0, mistakes: 0, combo: 0, bestCombo: 0, retried: new Set() };
+  const S = { hearts: PRACTICE ? 99 : 3, done: 0, firstTry: 0, mistakes: 0, combo: 0, bestCombo: 0, retried: new Set() };
   let i = 0;
   const bar = h('div', { class: 'bar-fill' });
   const hearts = h('div', { class: 'hearts' });
@@ -638,7 +923,7 @@ function runLesson(unit, li) {
     const p = me();
     const perfect = S.mistakes === 0;
     const stars = perfect ? 3 : S.mistakes <= 2 ? 2 : 1;
-    const xp = 10 + S.firstTry + (perfect ? 5 : 0);
+    const xp = 10 + (unit.level - 1) * 4 + S.firstTry + (perfect ? 5 : 0);
     const prevGoal = todayXp(p) >= GOAL;
     p.stars[id] = Math.max(p.stars[id] || 0, stars);
     if (perfect) p.perfects = (p.perfects || 0) + 1;
