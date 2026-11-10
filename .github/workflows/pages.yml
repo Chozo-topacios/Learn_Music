@@ -1,7 +1,7 @@
 name: Publicar en GitHub Pages
 on:
   push:
-    branches: [main, claude/brave-fermat-u29adh]
+    branches: [main, claude/brave-fermat-u29adh, claude/quirky-cray-dchsbv]
   workflow_dispatch:
 permissions:
   contents: read
