@@ -56,3 +56,22 @@ Claude Code pide confirmar la instalación la primera vez que abres el proyecto.
 /plugin marketplace add addyosmani/agent-skills
 /plugin install agent-skills@addy-agent-skills
 ```
+
+---
+
+# 🧭 Ruta — agente de planificación de viajes
+
+App web en [`viajes/`](viajes/) (se publica en `https://<tu-usuario>.github.io/<repo>/viajes/`).
+
+**Flujo:** primero pregunta si el viaje es **en carro o en avión**.
+
+- **🚗⚡ Carro (Chery iCAR 03T):** ruta en Google Maps (mapa + botones a Google Maps/Waze), peajes categoría I y estado de la vía,
+  **plan de energía** (con cuánto % salir, dónde y cuánto cargar, % de batería por tramo según subidas/bajadas y regeneración),
+  sitios turísticos en ruta, hospedajes con cargador, presupuesto y checklist.
+- **✈️ Avión:** sitios imperdibles, zonas clave para hospedaje, movilidad local, itinerario día por día y presupuesto.
+- Después se puede seguir conversando con el agente; los planes quedan en **Mis viajes** (en el dispositivo).
+
+**Cómo funciona:** el agente es Claude (Opus 5.5 por defecto) con búsqueda web en vivo y una herramienta local
+(`viajes/energia.js`) que calcula el consumo de la iCAR 03T. La llamada va directo del navegador a la API de Anthropic con tu
+clave, que se guarda solo en tu navegador (⚙️ Ajustes). Sin clave funcionan el mapa y la calculadora de batería.
+Los datos del carro (69,77 kWh, consumo, reserva, potencia DC) se pueden ajustar en ⚙️ Ajustes.
