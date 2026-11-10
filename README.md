@@ -30,8 +30,8 @@ El progreso se guarda en cada dispositivo (no necesita cuentas ni servidor).
 En la pestaña **Liga**, toca **📤 Enviar progreso** y manda el enlace al otro dispositivo
 (WhatsApp, iMessage, AirDrop). Al abrirlo, ese jugador aparece/actualiza en la liga.
 
-## 🔁 Traductor del Negocio (carpeta `traductor/`)
-App web con las herramientas del libro para conectar la ciberseguridad con el lenguaje del negocio.
+## 🔁 La Brecha Invisible (carpeta `traductor/`)
+App web con las herramientas del libro *La Brecha Invisible*, de Leonardo Pineda Lombana, para conectar la ciberseguridad con el lenguaje del negocio.
 Se publica en `https://<tu-usuario>.github.io/<repo>/traductor/`, funciona sin internet y se puede instalar como app.
 
 | Cap. | Herramienta | Qué hace la app |

@@ -1,9 +1,12 @@
 'use strict';
 /* =========================================================
-   Traductor del Negocio — las herramientas del libro
+   La Brecha Invisible — las herramientas del libro
+   de Leonardo Pineda Lombana
    convertidas en formularios guiados. Todo corre en el
    navegador y se guarda solo en este dispositivo.
    ========================================================= */
+
+const BOOK = { title: 'La Brecha Invisible', author: 'Leonardo Pineda Lombana' };
 
 // ---------------- Utilidades ----------------
 function h(tag, attrs, ...kids) {
@@ -710,7 +713,7 @@ function render() {
 function topbar(back) {
   return h('header', { class: 'top' },
     back ? h('a', { class: 'back', href: '#/', 'aria-label': 'Volver al inicio' }, '←') : h('span', { class: 'logo', 'aria-hidden': 'true' }, h('img', { src: 'icons/icon.svg', alt: '' })),
-    h('a', { class: 'brand', href: '#/' }, 'Traductor del Negocio'),
+    h('a', { class: 'brand', href: '#/' }, BOOK.title),
     h('a', { class: 'lib-link', href: '#/biblioteca' }, '📚 Biblioteca', store.saved.length ? h('span', { class: 'count' }, store.saved.length) : null),
   );
 }
@@ -721,9 +724,10 @@ function renderHome() {
   const main = h('main', { class: 'home' });
   main.append(
     h('section', { class: 'hero' },
-      h('p', { class: 'eyebrow' }, 'Las herramientas del libro, listas para usar'),
+      h('p', { class: 'eyebrow' }, `Las herramientas del libro ${BOOK.title}`),
       h('h1', null, 'Deja de vender miedo. Empieza a construir confianza.'),
       h('p', { class: 'lead' }, 'Nueve herramientas para explicar mejor lo que sabes, entender lo que necesita el negocio y conectar la seguridad con las decisiones que realmente importan.'),
+      h('p', { class: 'byline' }, 'Por ', h('strong', null, BOOK.author)),
     ),
     h('section', { class: 'situations', 'aria-labelledby': 'sit-h' },
       h('h2', { id: 'sit-h' }, '¿Qué tienes hoy?'),
@@ -766,6 +770,7 @@ function renderHome() {
   ));
   main.append(h('footer', { class: 'foot' },
     h('blockquote', null, '“Si tu estrategia de seguridad requiere que el negocio se detenga para protegerse, no tienes una estrategia de seguridad; tienes un freno de mano corporativo.”'),
+    h('p', { class: 'credit' }, h('cite', null, BOOK.title), ' · ', BOOK.author),
     h('p', null, 'Lo que escribes se guarda solo en este dispositivo. Funciona sin internet y se puede instalar como app.'),
   ));
   app.append(main);
@@ -943,7 +948,7 @@ async function copyDoc(r) {
 function printDoc(r, tool = current && current.tool) {
   const p = document.getElementById('print');
   p.innerHTML = '';
-  p.append(h('p', { class: 'print-tool' }, tool ? `${tool.name} · Capítulo ${tool.ch}` : ''), docEl(r), h('p', { class: 'print-foot' }, 'Traductor del Negocio · ' + fmtDate(Date.now())));
+  p.append(h('p', { class: 'print-tool' }, tool ? `${tool.name} · Capítulo ${tool.ch}` : ''), docEl(r), h('p', { class: 'print-foot' }, `${BOOK.title} · ${BOOK.author} · ${fmtDate(Date.now())}`));
   window.print();
 }
 
@@ -1003,7 +1008,7 @@ function renderLibrary(openId) {
 }
 function exportAll() {
   const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json' });
-  const a = h('a', { href: URL.createObjectURL(blob), download: `traductor-del-negocio-${new Date().toISOString().slice(0, 10)}.json` });
+  const a = h('a', { href: URL.createObjectURL(blob), download: `la-brecha-invisible-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }

@@ -82,6 +82,10 @@ button { cursor: pointer; }
 /* ---------- Inicio ---------- */
 .hero { padding: 16px 0 28px; }
 .hero h1 { font-size: clamp(30px, 6vw, 46px); letter-spacing: -.02em; max-width: 18ch; }
+.byline { margin-top: 14px; color: var(--muted); font-size: 15px; }
+.byline strong { color: var(--ink); }
+.credit { color: var(--ink-2); font-weight: 600; margin-bottom: 6px; }
+.credit cite { font-style: normal; }
 .home h2 { font-size: 20px; margin-bottom: 14px; }
 .situations { margin-bottom: 36px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

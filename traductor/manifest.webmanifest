@@ -1,7 +1,7 @@
 {
-  "name": "Traductor del Negocio",
-  "short_name": "Traductor",
-  "description": "Herramientas para conectar la ciberseguridad con el lenguaje del negocio.",
+  "name": "La Brecha Invisible",
+  "short_name": "La Brecha",
+  "description": "Herramientas del libro de Leonardo Pineda Lombana para conectar la ciberseguridad con el lenguaje del negocio.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
